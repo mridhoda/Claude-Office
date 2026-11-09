@@ -1662,3 +1662,88 @@
   border-bottom: 1px solid #35363a;
   -webkit-app-region: no-drag;
 }
+
+/* ===== JSM HQ EMBED ===== (src/main.tsx sets data-hq-embed on the page HQ serves at /office/)
+   HQ's own panels are the window chrome here: no title bar, no frame. The 28px bar's height is
+   taken off so the scene keeps its size. */
+html[data-hq-embed] .title-bar { display: none; }
+html[data-hq-embed] .app-wrapper { height: 654px; border-color: transparent; box-shadow: none; transform: translate(-50%, -50%) scale(var(--hq-scale, 1)); }
+/* HQ is the only place a message can go: the chat box and the AI watcher toggle talk to routes HQ does not have */
+html[data-hq-embed] .slack-input-wrap,
+html[data-hq-embed] .slack-cron-toggle { display: none; }
+/* The status strip's hook counter and "start it: npm run server" are about Claude Office's own server, not HQ: keep only the connection state */
+html[data-hq-embed] .strip-hooks,
+html[data-hq-embed] .strip-hint,
+html[data-hq-embed] .status-strip .strip-sep { display: none; }
+
+/* ===== FIELD LABEL (JSM HQ) ===== a worker's name and the field it works in, under the sprite.
+   The state labels (needs input, error, shipping, project) move down to sit below it. */
+.char-tag {
+  /* left/top/z-index inline (CharacterTag.tsx): its own layer, on the character's feet */
+  position: absolute;
+  transform: translate(-50%, -2px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  pointer-events: none;
+  white-space: nowrap;
+}
+.char-tag-name {
+  font: 8px/9px 'JetBrains Mono', monospace;
+  color: #f2e8d5;
+  text-shadow: 0 0 2px #000, 0 1px 1px #000;
+  max-width: 90px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.char-tag-role {
+  padding: 0 4px;
+  border-radius: 2px;
+  background: var(--tag-bg, #8b949e);
+  color: var(--tag-fg, #0d1117);
+  font: 700 7px/10px 'JetBrains Mono', monospace;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  max-width: 90px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.55);
+}
+.character-wrapper.has-tag .char-needs-you,
+.character-wrapper.has-tag .char-error,
+.character-wrapper.has-tag .char-project,
+.character-wrapper.has-tag .char-scene { top: calc(100% + 21px); }
+
+/* JSM HQ: the banner's own /all-clear (the chat input is hidden there) */
+.slack-incident-clear {
+  margin-left: auto;
+  padding: 1px 8px;
+  font: inherit;
+  font-size: 11px;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: 4px;
+  cursor: pointer;
+}
+.slack-incident-clear:hover { background: rgba(255, 255, 255, 0.25); }
+
+/* JSM HQ: what an agent just said to another, over its head (CharacterTalk.tsx; left/top/z-index inline) */
+.char-talk {
+  position: absolute;
+  transform: translate(-50%, calc(-100% - 76px));
+  max-width: 190px;
+  padding: 2px 6px;
+  border: 1px solid rgba(0, 0, 0, 0.55);
+  border-bottom: 2px solid var(--talk-to, #8b949e);
+  border-radius: 4px;
+  background: #fffaf0;
+  color: #1b1b1f;
+  font: 8px/11px 'JetBrains Mono', monospace;
+  pointer-events: none;
+  white-space: normal;
+  word-break: break-word;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+}
+.char-talk-to { color: var(--talk-to, #444); filter: brightness(0.7); }

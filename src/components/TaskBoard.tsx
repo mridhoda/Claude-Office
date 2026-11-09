@@ -21,6 +21,7 @@
 
 import React, { useState } from 'react'
 import { useTheme } from '../theme'
+import { isHqEmbed } from '../serverUrl'
 import type { SessionInfo } from '../types'
 import {
   BOARD_RECT, COLUMNS, FX_MS, boardCounts, boardLabel, columnView, cycleTaskBoards, isBlocked, shownBoard, taskCaption,
@@ -45,10 +46,10 @@ const Note: React.FC<{
   fx?: TaskFx
   onHover: (id: string | null) => void
 }> = ({ task, board, fx, onHover }) => {
-  const blocked = isBlocked(task, board)
+  const blocked = isBlocked(task, board) || task.tag === 'blocked'
   return (
     <span
-      className={`task-note ${task.status}${blocked ? ' blocked' : ''}${fx ? FX_CLASS[fx] : ''}`}
+      className={`task-note ${task.status}${blocked ? ' blocked' : ''}${task.tag === 'review' ? ' review' : ''}${fx ? FX_CLASS[fx] : ''}`}
       aria-label={taskCaption(task, board)}
       onMouseEnter={() => onHover(task.id)}
       onMouseLeave={() => onHover(null)}
@@ -76,7 +77,8 @@ const TaskBoard: React.FC<TaskBoardProps> = ({ sessions, night, onActivate }) =>
 
   const activate = (e: React.SyntheticEvent) => {
     e.stopPropagation()
-    if (several) cycleTaskBoards()
+    // Inside JSM HQ the Plan wall picker chooses the board, so a click does not cycle
+    if (several && !isHqEmbed()) cycleTaskBoards()
     onActivate?.()
   }
 

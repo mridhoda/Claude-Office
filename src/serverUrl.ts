@@ -36,6 +36,19 @@ export interface PageLocation {
   host: string
   port: string
   origin: string
+  pathname?: string
+}
+
+/**
+ * JSM HQ embed: HQ serves this page at /office/ and answers the office API
+ * (WebSocket + GET routes) under /office-api/, because HQ's own /ws is taken.
+ */
+export const HQ_EMBED_PAGE = '/office/'
+export const HQ_EMBED_API = '/office-api'
+
+/** True when the page is the one JSM HQ serves at /office/. */
+export function isHqEmbed(loc: PageLocation = pageLocation()): boolean {
+  return (loc.pathname ?? '').startsWith(HQ_EMBED_PAGE)
 }
 
 /** What Vite says about the build: dev or not, and the configured server port. */
@@ -74,6 +87,7 @@ export function isDevServerPage(loc: PageLocation = pageLocation(), env: BuildEn
 
 /** The server's http(s) origin, no trailing slash: fetch(`${officeHttpBase()}/chat`). */
 export function officeHttpBase(loc: PageLocation = pageLocation(), env: BuildEnv = buildEnv()): string {
+  if (isHqEmbed(loc)) return `${loc.origin}${HQ_EMBED_API}`
   if (!isDevServerPage(loc, env)) return loc.origin
   // 127.0.0.1, never the page's own host name: `localhost` can resolve to
   // [::1] first (macOS does), where any local user could be listening while
@@ -83,6 +97,7 @@ export function officeHttpBase(loc: PageLocation = pageLocation(), env: BuildEnv
 
 /** The WebSocket URL: wss when the page is https, ws otherwise. */
 export function officeWsUrl(loc: PageLocation = pageLocation(), env: BuildEnv = buildEnv()): string {
+  if (isHqEmbed(loc)) return `${loc.protocol === 'https:' ? 'wss' : 'ws'}://${loc.host}${HQ_EMBED_API}/ws`
   if (!isDevServerPage(loc, env)) return `${loc.protocol === 'https:' ? 'wss' : 'ws'}://${loc.host}/ws`
   return `ws://127.0.0.1:${configuredServerPort(env)}/ws`
 }

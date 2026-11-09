@@ -58,6 +58,7 @@ import {
 } from './agentManager'
 import { BOSS_ROLE, BOSS_NAME } from './config'
 import { getTheme } from './theme'
+import { makeTalk } from './talk'
 import { getVariant, pickIncidentLine } from './incident'
 import { isSignalKind, signalFamily, signalOutcome, signalWhere, SCENE_MS } from './signals'
 
@@ -101,6 +102,8 @@ const A2A_ICONS: Record<string, string> = {
   task_handoff:   '📦',
 }
 export const A2A_VISIT_MS = 6000
+/** How long the bubble over a sender stays */
+export const TALK_MS = 6000
 
 const SYSTEM_COLOR = '#8b8d91'
 
@@ -186,6 +189,7 @@ export interface OfficeEnv {
 export type OfficeAction =
   | OfficeEvent
   | { type: 'a2a_visit_over'; agentId: string }
+  | { type: 'talk_over'; agentId: string; at: number }
   /** The boss has said his piece at Claude's desk (seq guards against a stale timer) */
   | { type: 'handover_over'; seq: number }
   /**
@@ -418,6 +422,7 @@ interface SpawnFields {
   preferredSpotId?: string
   statusText?: string
   model?: string
+  roleLabel?: string
 }
 
 /**
@@ -444,6 +449,7 @@ function spawnAgent(state: OfficeState, raw: SpawnFields, env: OfficeEnv, announ
     project: raw.project,
     unread: raw.unread || undefined,
     ...(raw.model ? { model: raw.model } : {}),
+    ...(raw.roleLabel ? { roleLabel: raw.roleLabel } : {}),
   }
 
   let agent: Agent
@@ -801,6 +807,19 @@ function reduceSignal(state: OfficeState, action: SignalEvent, env: OfficeEnv): 
     return { state: cur, effects }
   }
 
+  // A pull request's review (JSM HQ): a scene on the author and a sound. No chat line: HQ's own
+  // activity line already says what happened, and a second one would say it twice.
+  if (family === 'review') {
+    if (outcome === 'fail') {
+      scene('red', SCENE_MS.red)
+      effects.push({ kind: 'sfx', sfx: 'error' })
+    } else {
+      scene('shipped', SCENE_MS.shipped)
+      effects.push({ kind: 'sfx', sfx: 'celebration' })
+    }
+    return { state: cur, effects }
+  }
+
   if (family === 'push') {
     if (outcome === 'ok' && action.toDefault) {
       scene('pushed', SCENE_MS.pushed)
@@ -927,6 +946,29 @@ function reduceEvent(state: OfficeState, action: OfficeAction, env: OfficeEnv): 
       return {
         state: { ...state, agents: state.agents.map(a => (a.id === target.id ? { ...a, statusText: statusMsg, lastFailed: failed } : a)) },
         effects: [{ kind: 'msg', sender: target.name, role: target.role, color: cfgFor(target.role).color, text: `${icon} ${statusMsg}` }],
+      }
+    }
+
+    // ── A permanent worker changes state (JSM HQ): working / idle / needs-you ──
+    // Same transition a session's Claude takes, so an idle one dozes off and a
+    // needs-you one raises its hand. One still walking in takes it on arrival.
+    case 'agent_state': {
+      const id = action.agentId
+      if (!id || !action.main) return none
+      const patch = fromServerMain(action.main)
+      return { state: applyMain(state, id, action.status ? { ...patch, statusText: action.status } : patch, env), effects: [] }
+    }
+
+    // ── A seated worker walks somewhere for a moment (JSM HQ: the lead at the plan wall) ──
+    // Same walk-and-return as a directed message; one that is not at its desk stays on course.
+    case 'agent_errand': {
+      const agent = state.agents.find(a => a.id === action.agentId)
+      const spot = action.spot
+      if (!agent || !spot || agent.state !== 'working') return none
+      const ms = Math.min(Math.max(action.ms ?? A2A_VISIT_MS, 1000), 30_000)
+      return {
+        state: { ...state, agents: state.agents.map(a => (a.id === agent.id ? walkTo(a, spot, action.label ?? 'on an errand', env) : a)) },
+        effects: [{ kind: 'schedule', action: { type: 'a2a_visit_over', agentId: agent.id }, delayMs: ms }],
       }
     }
 
@@ -1136,16 +1178,32 @@ function reduceEvent(state: OfficeState, action: OfficeAction, env: OfficeEnv): 
       const icon = A2A_ICONS[action.msg_type ?? 'message'] ?? A2A_ICONS.message
       effects.push({ kind: 'msg', sender: msgSender, role: msgRole, color: msgColor, text: `${icon} → @${toAgent?.name ?? recipient}: ${text}`, id: action.id })
 
+      // The bubble over the sender: who it is for and the start of it. One per agent: a newer message replaces it,
+      // and the timer below only clears the bubble it was set for
+      let withTalk = base
+      if (fromAgent) {
+        const talk = makeTalk(toAgent?.name ?? recipient, toAgent ? cfgFor(toAgent.role).color : SYSTEM_COLOR, text, env.now)
+        withTalk = { ...base, agents: base.agents.map(a => (a.id === fromAgent.id ? { ...a, talk } : a)) }
+        effects.push({ kind: 'schedule', action: { type: 'talk_over', agentId: fromAgent.id, at: talk.at }, delayMs: TALK_MS })
+      }
+
       // Only a seated sender gets up; one walking in, out or waiting stays on course
       if (!fromAgent || !toAgent || fromAgent.id === toAgent.id || fromAgent.id === BOSS_ID || fromAgent.state !== 'working') {
-        return { state: base, effects }
+        return { state: withTalk, effects }
       }
       const visitSpot = { x: toAgent.deskPosition.x + 4, y: toAgent.deskPosition.y + 2 }
       effects.push({ kind: 'schedule', action: { type: 'a2a_visit_over', agentId: fromAgent.id }, delayMs: A2A_VISIT_MS })
       return {
-        state: { ...base, agents: base.agents.map(a => (a.id === fromAgent.id ? walkTo(a, visitSpot, `talking to ${toAgent.name}`, env) : a)) },
+        state: { ...withTalk, agents: withTalk.agents.map(a => (a.id === fromAgent.id ? walkTo(a, visitSpot, `talking to ${toAgent.name}`, env) : a)) },
         effects,
       }
+    }
+
+    // ── The bubble's time is up (unless a newer message replaced it) ───────
+    case 'talk_over': {
+      const agent = state.agents.find(a => a.id === action.agentId)
+      if (!agent?.talk || agent.talk.at !== action.at) return none
+      return { state: { ...state, agents: state.agents.map(a => (a.id === agent.id ? { ...a, talk: undefined } : a)) }, effects: [] }
     }
 
     // ── The visitor's chat is over: back to their own desk ─────────────────
@@ -1485,8 +1543,9 @@ export function stepOffice(state: OfficeState, dt: number, env: OfficeEnv): Step
             const pending = pendingStatus[agent.id]
             if (pending) pendingStatus = without(pendingStatus, agent.id)
             // A session's Claude sits down in whatever its main thread is doing and keeps its
-            // status line: applyMain has kept that current all along, so nothing queued replays
-            const main = isMainAgent(agent)
+            // status line: applyMain has kept that current all along, so nothing queued replays.
+            // A worker given a main state (agent_state, from JSM HQ) sits down the same way.
+            const main = isMainAgent(agent) || agent.mainState !== undefined
             updated = main
               ? { ...agent, position, state: agentStateFor(agent.mainState) }
               : { ...agent, position, state: 'working', statusText: pending?.status ?? workMessage(), lastFailed: pending ? pending.failed : agent.lastFailed }

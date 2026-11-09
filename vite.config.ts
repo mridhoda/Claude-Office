@@ -21,6 +21,8 @@ export default defineConfig({
   // and room URLs in src/ are absolute ('/sprites/...'), so a relative base
   // would not make the bundle relocatable anyway — keep the root base explicit.
   base: '/',
+  // JSM HQ serves this build next to its own UI, which also owns /assets/.
+  build: { assetsDir: 'office-assets' },
   // Where the page finds the server when Vite, not the server, serves it
   // (src/serverUrl.ts). A production build is served by the server itself and
   // uses its own origin, so this only matters under `vite` / `vite --port`.

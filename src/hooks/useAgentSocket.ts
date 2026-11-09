@@ -23,7 +23,7 @@
  */
 
 import { useEffect, useRef, useState, useCallback } from 'react'
-import { OfficeEvent, PendingPermission, ServerHealth, SessionInfo, SessionRegistry, SnapshotAgent } from '../types'
+import { OfficeEvent, PrScreenInfo, PendingPermission, ServerHealth, SessionInfo, SessionRegistry, SnapshotAgent } from '../types'
 import type { SessionStatus, MeterTotals } from '../meters'
 import type { TaskBoardInfo } from '../taskBoard'
 import { projectFromCwd } from '../mainState'
@@ -80,6 +80,8 @@ interface SnapshotMessage {
   health?: ServerHealth
   /** Each session's task board, no descriptions (server/tasks.js) */
   taskBoards?: TaskBoardInfo[]
+  /** JSM HQ: the pull requests on the wall TV (src/prScreen.ts) */
+  prScreen?: PrScreenInfo | null
   mcpServers: string[]
   timestamp: number
 }
@@ -304,6 +306,7 @@ export function useAgentSocket(options: AgentSocketOptions = {}): AgentSocketRes
       if (Array.isArray(snap.taskBoards)) {
         pushEvent({ type: 'task_board', boards: snap.taskBoards, timestamp: snap.timestamp })
       }
+      if (snap.prScreen !== undefined) pushEvent({ type: 'pr_screen', screen: snap.prScreen, timestamp: snap.timestamp })
       // The whole roster goes to the office as one event, so it can reconcile:
       // agents that completed or timed out while we were disconnected leave,
       // agents still here are refreshed in place, new ones walk in (C35). The

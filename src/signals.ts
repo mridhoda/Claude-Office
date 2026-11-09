@@ -10,7 +10,7 @@
 
 import type { SignalEvent, SignalKind } from './types'
 
-export type SignalFamily = 'deploy' | 'build' | 'test' | 'push'
+export type SignalFamily = 'deploy' | 'build' | 'test' | 'push' | 'review'
 export type SignalOutcome = 'start' | 'ok' | 'fail'
 
 const SIGNALS: Record<SignalKind, [SignalFamily, SignalOutcome]> = {
@@ -18,6 +18,7 @@ const SIGNALS: Record<SignalKind, [SignalFamily, SignalOutcome]> = {
   build_start: ['build', 'start'], build_ok: ['build', 'ok'], build_failed: ['build', 'fail'],
   test_start: ['test', 'start'], test_ok: ['test', 'ok'], test_failed: ['test', 'fail'],
   push: ['push', 'start'], push_done: ['push', 'ok'], push_failed: ['push', 'fail'],
+  review_changes: ['review', 'fail'], review_passed: ['review', 'ok'],
 }
 
 /** A known signal kind (a newer server may send kinds this page does not know) */
@@ -61,5 +62,6 @@ export function signalFailureLabel(s: Pick<SignalEvent, 'kind' | 'target' | 'pro
     case 'build':  return `build failed${where ? ` in ${where}` : ''}${tail}`
     case 'test':   return `tests failed${where ? ` in ${where}` : ''}${tail}`
     case 'push':   return `push${s.target ? ` of ${s.target}` : ''} failed${tail}`
+    case 'review': return `changes requested${where ? ` on ${where}` : ''}${tail}`
   }
 }

@@ -263,8 +263,9 @@ function reduceSignal(state: IncidentState, input: IncidentSignal): IncidentTran
   const active = state.variant === 'incident'
   const family = signalFamily(input.kind)
   const outcome = signalOutcome(input.kind)
-  // A push is not prod, a start has no result yet, and a run stopped with Esc failed nobody
-  if (family === 'push' || outcome === 'start' || input.interrupted) return { state }
+  // A push is not prod, a start has no result yet, and a run stopped with Esc failed nobody.
+  // A pull request's review (JSM HQ) is a verdict on code, never an outage.
+  if (family === 'push' || family === 'review' || outcome === 'start' || input.interrupted) return { state }
   const key = `${family}:${input.target ?? ''}`
 
   if (outcome === 'fail') {

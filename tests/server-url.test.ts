@@ -8,7 +8,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   DEFAULT_SERVER_PORT, VITE_DEV_PORT,
-  configuredServerPort, isDevServerPage, officeHttpBase, officeWsUrl,
+  configuredServerPort, isDevServerPage, isHqEmbed, officeHttpBase, officeWsUrl,
   type BuildEnv, type PageLocation,
 } from '../src/serverUrl'
 
@@ -102,5 +102,20 @@ describe('without a window (Node, the tests)', () => {
     expect(typeof window).toBe('undefined')
     expect(officeHttpBase()).toBe('http://127.0.0.1:3334')
     expect(officeWsUrl()).toBe('ws://127.0.0.1:3334/ws')
+  })
+})
+
+describe('embedded in JSM HQ (page at /office/)', () => {
+  const embed = (path = '/office/'): PageLocation => ({ ...at('http://127.0.0.1:7420/'), pathname: path })
+
+  it('uses HQ\'s own origin with the API under /office-api (HQ owns /ws)', () => {
+    expect(isHqEmbed(embed())).toBe(true)
+    expect(officeHttpBase(embed(), built())).toBe('http://127.0.0.1:7420/office-api')
+    expect(officeWsUrl(embed(), built())).toBe('ws://127.0.0.1:7420/office-api/ws')
+  })
+
+  it('a page elsewhere on the same origin is not the embed', () => {
+    expect(isHqEmbed(embed('/'))).toBe(false)
+    expect(officeWsUrl(embed('/'), built())).toBe('ws://127.0.0.1:7420/ws')
   })
 })

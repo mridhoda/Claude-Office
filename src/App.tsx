@@ -25,7 +25,8 @@ import {
   type OfficeState, type OfficeAction, type OfficeEffect, type OfficeEnv,
 } from './officeReducer'
 import { BOSS_ROLE } from './config'
-import { officeHttpBase, officeWsUrl } from './serverUrl'
+import { isHqEmbed, officeHttpBase, officeWsUrl } from './serverUrl'
+import { postToHq } from './hqBridge'
 import { pickEvent } from './events'
 import { getInteraction } from './interactions'
 import {
@@ -39,7 +40,11 @@ import {
 } from './incident'
 import IncidentLayer from './components/IncidentLayer'
 import TaskBoard from './components/TaskBoard'
-import { dispatchTaskBoards } from './taskBoard'
+import { dispatchTaskBoards, getShownBoard } from './taskBoard'
+import { dispatchPrScreen } from './prScreen'
+import PrScreen from './components/PrScreen'
+import CharacterTag from './components/CharacterTag'
+import CharacterTalk from './components/CharacterTalk'
 
 // ---------------------------------------------------------------------------
 // Placement helper — loaded via ?helper query param
@@ -326,7 +331,14 @@ const App: React.FC = () => {
   // The inspector card (src/components/AgentCard.tsx): the character clicked
   // last; clicking the same one again closes it
   const [inspectedId, setInspectedId] = useState<string | null>(null)
-  const handleCharacterClick = useCallback((id: string) => setInspectedId(prev => (prev === id ? null : id)), [])
+  // Inside JSM HQ the click goes to HQ's own panel for that agent (it has the terminal); the boss has none
+  const handleCharacterClick = useCallback((id: string) => {
+    if (isHqEmbed()) {
+      if (id !== BOSS_ID) postToHq({ type: 'agent-click', agentId: id })
+      return
+    }
+    setInspectedId(prev => (prev === id ? null : id))
+  }, [])
 
   const handleFurnitureClick = useCallback((itemId: string) => {
     const interaction = getInteraction(itemId)
@@ -687,6 +699,11 @@ const App: React.FC = () => {
     // The sessions' task lists (server/tasks.js): the kanban board's own store (src/taskBoard.ts)
     if (action.type === 'task_board') {
       dispatchTaskBoards(action)
+      return
+    }
+    // The pull requests on the wall TV (JSM HQ): its own store (src/prScreen.ts)
+    if (action.type === 'pr_screen') {
+      dispatchPrScreen(action)
       return
     }
 
@@ -1476,7 +1493,10 @@ const App: React.FC = () => {
           <FurnitureRenderer onItemClick={handleFurnitureClick} items={furnitureItems} />
 
           {/* The session's real task list on the kanban whiteboard (nothing drawn while no session has tasks) */}
-          <TaskBoard sessions={sessions} night={forcedNight ? 1 : dayNightMode === 'auto' ? nightOpacity : dayNightMode === 'night' ? 1 : 0} onActivate={() => handleFurnitureClick('kanban-board')} />
+          <TaskBoard sessions={sessions} night={forcedNight ? 1 : dayNightMode === 'auto' ? nightOpacity : dayNightMode === 'night' ? 1 : 0} onActivate={() => { handleFurnitureClick('kanban-board'); postToHq({ type: 'board-click', boardId: getShownBoard()?.sessionId ?? null }) }} />
+
+          {/* The pull requests on the wall TV (JSM HQ; nothing drawn while there are none) */}
+          <PrScreen onActivate={() => { handleFurnitureClick('tv-monitor'); postToHq({ type: 'prs-click' }) }} />
 
           {/* Agents */}
           {agents.map(agent => {
@@ -1505,6 +1525,10 @@ const App: React.FC = () => {
               />
             )
           })}
+
+          {/* Name + field labels, above the furniture so a desk never hides them (JSM HQ) */}
+          {agents.map(agent => <CharacterTag key={agent.id} agent={agent} />)}
+          {agents.map(agent => <CharacterTalk key={agent.id} agent={agent} />)}
 
           {/* Angela's cat — follows whoever is cast as Angela in Office theme */}
           {(() => {

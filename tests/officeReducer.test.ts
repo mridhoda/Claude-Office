@@ -1513,3 +1513,48 @@ describe("the boss's errands to the furniture", () => {
     expect(errand).not.toMatch(/clearInterval\(checkArrival\), \d+\)/)
   })
 })
+
+// ---------------------------------------------------------------------------
+// agent_state — a permanent worker (JSM HQ) changes state without leaving
+// ---------------------------------------------------------------------------
+
+describe('agent_state', () => {
+  it('seats a worker, then moves it working -> idle -> needs-you in place', () => {
+    const s0 = fullOffice(1) // w1 is seated and working
+    expect(agent(s0, 'w1')!.state).toBe('working')
+
+    const { state: s1 } = reduceOffice(s0, { type: 'agent_state', agentId: 'w1', main: { state: 'idle' } }, env())
+    expect(agent(s1, 'w1')!.state).toBe('idle')
+    expect(agent(s1, 'w1')!.statusText).toBe('turn over — idle')
+    expect(s1.meta.w1.idleSince).not.toBeNull()
+
+    const { state: s2 } = reduceOffice(s1, { type: 'agent_state', agentId: 'w1', status: 'waiting for your answer', main: { state: 'needs-you' } }, env())
+    expect(agent(s2, 'w1')!.mainState).toBe('needs-you')
+    expect(agent(s2, 'w1')!.statusText).toBe('waiting for your answer')
+    expect(s2.meta.w1.idleSince).toBeNull()
+
+    const { state: s3 } = reduceOffice(s2, { type: 'agent_state', agentId: 'w1', main: { state: 'working' } }, env())
+    expect(agent(s3, 'w1')!.state).toBe('working')
+  })
+
+  it('ignores an unknown agent and an event without a main record', () => {
+    const s0 = fullOffice(1)
+    expect(reduceOffice(s0, { type: 'agent_state', agentId: 'nobody', main: { state: 'idle' } }, env()).state).toEqual(s0)
+    expect(reduceOffice(s0, { type: 'agent_state', agentId: 'w1' }, env()).state).toEqual(s0)
+  })
+})
+
+describe('agent_state while the worker is still walking in', () => {
+  it('takes the state on arrival, instead of dropping it', () => {
+    const { state: s0 } = reduceOffice(emptyOffice(), spawn('w1'), env())
+    expect(agent(s0, 'w1')!.state).toBe('new-hire')
+
+    // HQ sends the state right after the spawn; the sprite is still at the door
+    const { state: s1 } = reduceOffice(s0, { type: 'agent_state', agentId: 'w1', main: { state: 'idle' } }, env())
+    expect(agent(s1, 'w1')!.state).toBe('new-hire')
+    expect(agent(s1, 'w1')!.mainState).toBe('idle')
+
+    const settled = settle(s1).state
+    expect(agent(settled, 'w1')!.state).toBe('idle')
+  })
+})

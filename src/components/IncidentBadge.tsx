@@ -5,7 +5,8 @@
  */
 
 import React, { useEffect, useReducer } from 'react'
-import { useIncident, formatClock } from '../incident'
+import { useIncident, formatClock, dispatchIncident } from '../incident'
+import { isHqEmbed } from '../serverUrl'
 
 const IncidentBadge: React.FC = () => {
   const incident = useIncident()
@@ -28,6 +29,15 @@ const IncidentBadge: React.FC = () => {
     >
       <span className="slack-incident-dot" />
       🔥 {what} {formatClock(elapsed)}
+      {/* Inside JSM HQ the chat input is hidden, so /all-clear cannot be typed: the banner ends it */}
+      {isHqEmbed() && (
+        <button
+          className="slack-incident-clear"
+          onClick={() => dispatchIncident({ type: 'command', at: Date.now(), cmd: 'all-clear', reason: 'manual' })}
+        >
+          All clear
+        </button>
+      )}
     </div>
   )
 }

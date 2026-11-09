@@ -26,6 +26,8 @@ export interface BoardTask {
   /** The ids it waits on, as Claude Code wrote them (a completed blocker no longer blocks) */
   blockedBy: string[]
   owner?: string
+  /** JSM HQ: the board has three columns, so a task in review or blocked sits in In progress and wears a mark */
+  tag?: 'review' | 'blocked'
 }
 
 /** One session's board (server/tasks.js) */
@@ -47,6 +49,8 @@ export interface TaskBoardsState {
   boards: TaskBoardInfo[]
   /** The session a click on the board chose; the next change on any board lets the newest win again */
   pinned: string | null
+  /** JSM HQ's "Plan wall" choice: wins over `pinned`, and no change on any board lets go of it */
+  locked?: string | null
   /** The latest change's effects, per task id of that session's board */
   fx: { sessionId: string; at: number; tasks: Record<string, TaskFx> } | null
 }
@@ -92,6 +96,7 @@ export function cleanBoard(raw: unknown): TaskBoardInfo | null {
     ...t,
     subject: typeof t.subject === 'string' ? t.subject : '',
     blockedBy: Array.isArray(t.blockedBy) ? t.blockedBy.filter(id => typeof id === 'string') : [],
+    tag: t.tag === 'review' || t.tag === 'blocked' ? t.tag : undefined,
   }))
   if (tasks.length === 0) return null
   return { ...b, sessionId: b.sessionId, tasks, updatedAt: typeof b.updatedAt === 'number' ? b.updatedAt : 0 } as TaskBoardInfo
@@ -120,7 +125,7 @@ export function reduceTaskBoards(prev: TaskBoardsState, event: OfficeEvent, now 
   if (Array.isArray(event.boards)) {
     const boards = event.boards.map(cleanBoard).filter((b): b is TaskBoardInfo => b !== null).sort(byRecency)
     const pinned = prev.pinned && boards.some(b => b.sessionId === prev.pinned) ? prev.pinned : null
-    return { boards, pinned, fx: null }
+    return { boards, pinned, locked: stillThere(prev.locked, boards), fx: null }
   }
   const sessionId = event.sessionId
   if (!sessionId) return prev
@@ -131,11 +136,20 @@ export function reduceTaskBoards(prev: TaskBoardsState, event: OfficeEvent, now 
   const boards = next ? [...others, next].sort(byRecency) : others
   // The board that changed last is the one on the wall again
   const fx = next ? { sessionId, at: now, tasks: diffBoards(old, next) } : prev.fx?.sessionId === sessionId ? null : prev.fx
-  return { boards, pinned: null, fx }
+  return { boards, pinned: null, locked: stillThere(prev.locked, boards), fx }
 }
 
-/** The board on the wall: the one a click chose, else the one that changed last; null when no session has tasks. */
+/** A locked board id, while that board still exists. */
+function stillThere(locked: string | null | undefined, boards: TaskBoardInfo[]): string | null {
+  return locked && boards.some(b => b.sessionId === locked) ? locked : null
+}
+
+/** The board on the wall: HQ's choice, else the one a click chose, else the one that changed last; null when no session has tasks. */
 export function shownBoard(state: TaskBoardsState): TaskBoardInfo | null {
+  if (state.locked) {
+    const locked = state.boards.find(b => b.sessionId === state.locked)
+    if (locked) return locked
+  }
   if (state.pinned) {
     const pinned = state.boards.find(b => b.sessionId === state.pinned)
     if (pinned) return pinned
@@ -148,7 +162,13 @@ export function cycleBoards(state: TaskBoardsState): TaskBoardsState {
   if (state.boards.length < 2) return state
   const current = shownBoard(state)
   const i = current ? state.boards.indexOf(current) : -1
-  return { ...state, pinned: state.boards[(i + 1) % state.boards.length].sessionId, fx: null }
+  return { ...state, pinned: state.boards[(i + 1) % state.boards.length].sessionId, locked: null, fx: null }
+}
+
+/** JSM HQ chose a board on its Plan wall (null: back to the one that changed last). */
+export function lockBoard(state: TaskBoardsState, sessionId: string | null): TaskBoardsState {
+  const locked = stillThere(sessionId, state.boards)
+  return locked === (state.locked ?? null) ? state : { ...state, locked, fx: null }
 }
 
 // ---------------------------------------------------------------------------
@@ -219,7 +239,8 @@ export function clip(text: string | undefined, max = 60): string {
 export function taskCaption(task: BoardTask, board: TaskBoardInfo): string {
   const subject = clip(task.subject, 90) || 'untitled task'
   let text: string
-  if (task.status === 'in_progress') text = `In progress: ${clip(task.activeForm, 90) || subject}`
+  if (task.tag) text = `${task.tag === 'review' ? 'In review' : 'Blocked'}: ${subject}${task.activeForm ? ` — ${clip(task.activeForm, 60)}` : ''}`
+  else if (task.status === 'in_progress') text = `In progress: ${clip(task.activeForm, 90) || subject}`
   else if (task.status === 'completed') text = `Done: ${subject}`
   else {
     const blockers = task.blockedBy.filter(id => board.tasks.some(t => t.id === id && t.status !== 'completed'))
@@ -307,4 +328,9 @@ export function dispatchTaskBoards(event: OfficeEvent) {
 /** A click on the board: show the next session's board (when there are several). */
 export function cycleTaskBoards() {
   set(cycleBoards(state))
+}
+
+/** JSM HQ's Plan wall choice, from the page that embeds the office (src/hqBridge.ts). */
+export function lockTaskBoard(sessionId: string | null) {
+  set(lockBoard(state, sessionId))
 }

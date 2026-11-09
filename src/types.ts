@@ -19,6 +19,9 @@ export interface Position {
   y: number
 }
 
+/** A directed message, as the bubble shows it */
+export interface AgentTalk { to: string; toColor: string; text: string; at: number }
+
 export interface Agent {
   id: string
   name: string
@@ -48,6 +51,9 @@ export interface Agent {
   waitingOn?: number        // background workers a finished turn still waits for
   model?: string            // the session's model (session_model / session_started)
   scene?: AgentScene        // a signal's scene on the character that ran the command
+  roleLabel?: string        // JSM HQ: the field this worker is in (its HQ role), drawn under the sprite
+  /** JSM HQ: what this agent just said to another one, shown over its head for a few seconds (src/talk.ts) */
+  talk?: AgentTalk
 }
 
 /**
@@ -60,6 +66,8 @@ export type SignalKind =
   | 'build_start' | 'build_ok' | 'build_failed'
   | 'test_start' | 'test_ok' | 'test_failed'
   | 'push' | 'push_done' | 'push_failed'
+  // JSM HQ: a pull request's review came back (not something a Bash command can mean)
+  | 'review_changes' | 'review_passed'
 
 /** The server's `signal` broadcast (also the snapshot's `signals` entries and GET /signals) */
 export interface SignalEvent {
@@ -239,6 +247,7 @@ export interface SnapshotAgent {
   sessionId?: string
   project?: string
   server?: string
+  roleLabel?: string
 }
 
 /**
@@ -260,8 +269,14 @@ export interface ServerHealth {
   uptimeMs: number
 }
 
+/** Where a pull request stands, for the wall TV (JSM HQ) */
+export type PrState = 'pending' | 'reviewing' | 'changes' | 'passed' | 'merged'
+export interface PrItem { number: number; title: string; state: PrState; author?: string }
+export interface PrScreenInfo { items: PrItem[]; open: number; updatedAt: number }
+
 export interface OfficeEvent {
-  type: 'agent_spawned' | 'agent_working' | 'agent_completed' | 'mcp_call' | 'mcp_done' | 'new_hire' | 'chat_message' | 'chat_typing' | 'chat_reaction' | 'chat_seen' | 'inbox_update' | 'variant_change' | 'session_started' | 'session_ended' | 'session_status' | 'agent_status' | 'snapshot'
+  // agent_state (JSM HQ): a seated worker's main state (working / idle / needs-you ...), applied like a Claude's
+  type: 'agent_spawned' | 'agent_working' | 'agent_completed' | 'agent_state' | 'agent_errand' | 'pr_screen' | 'mcp_call' | 'mcp_done' | 'new_hire' | 'chat_message' | 'chat_typing' | 'chat_reaction' | 'chat_seen' | 'inbox_update' | 'variant_change' | 'session_started' | 'session_ended' | 'session_status' | 'agent_status' | 'snapshot'
     // The turn events (UserPromptSubmit, Stop, PermissionRequest/Notification, StopFailure, Pre/PostCompact, CwdChanged, PostModelSwitch),
     // session_main (a server-side change: a hand lowered by a tool result or the timeout) and
     // session_tool_done (main-thread PostToolUse / PostToolBatch, the input that lowers a hand)
@@ -370,6 +385,12 @@ export interface OfficeEvent {
   unread?: number
   // agent_working: the tool call errored (PostToolUseFailure)
   failed?: boolean
+  // pr_screen (JSM HQ): the pull requests on the wall TV, the server's whole picture; null / empty draws nothing
+  screen?: PrScreenInfo | null
+  // agent_errand (JSM HQ): a seated worker walks to `spot` for `ms`, saying `label`, then goes back to its desk
+  spot?: { x: number; y: number }
+  ms?: number
+  label?: string
   // variant_change: the server relayed /incident or /all-clear to every client
   // (reason is also why a session_ended session ended)
   variant?: 'none' | 'incident'

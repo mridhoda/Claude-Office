@@ -7,6 +7,7 @@ import { ROLE_TO_CHAR, BOSS_ROLE } from '../config'
 import { getSpritePath, useTheme } from '../theme'
 import { useVariant } from '../incident'
 import { isMainAgent, isHardNeedsYou, needsYouBadge, needsYouShort } from '../mainState'
+import { roleLabelStyle, roleLabelText } from '../roleLabel'
 
 export { ROLE_TO_CHAR }
 
@@ -164,7 +165,8 @@ const Character: React.FC<CharacterProps> = ({ agent, idleDurationMs = 0, zIndex
   // you, a warning on an API error, a broom during a memory wipe, a glass of
   // water while its background workers are still out, the typing bubble while
   // a turn runs, and sleeping.png once it has been idle for 30 s (getEffect).
-  const main = isMainAgent(agent)
+  // A worker JSM HQ gave a main state (agent_state) wears it the same way.
+  const main = isMainAgent(agent) || agent.mainState !== undefined
   const mainState = main ? agent.mainState : undefined
   const needsYou = mainState === 'needs-you' ? agent.needsYou : undefined
   const hardNeedsYou = isHardNeedsYou(needsYou)
@@ -186,18 +188,21 @@ const Character: React.FC<CharacterProps> = ({ agent, idleDurationMs = 0, zIndex
   const stateLabel = needsYou
     ? `${needsYouShort(needsYou.kind)}${projectTag ? ` · ${projectTag}` : ''}`
     : mainState === 'error' ? `⚠ API error${projectTag ? ` · ${projectTag}` : ''}` : null
-  const tooltip = [agent.name, projectTag, main && agent.statusText ? `— ${agent.statusText}` : null].filter(Boolean).join(' ')
+  // JSM HQ: the field this worker is in, as a coloured pill under its name
+  const fieldLabel = roleLabelText(agent.roleLabel)
+  const field = fieldLabel ? roleLabelStyle(fieldLabel) : null
+  const tooltip = [agent.name, fieldLabel || null, projectTag, main && agent.statusText ? `— ${agent.statusText}` : null].filter(Boolean).join(' ')
 
   return (
     <div
-      className={`character-wrapper state-${animState}${mainState ? ` main-${mainState}` : ''}${scene ? ` scene-${scene.kind}` : ''}${onClick ? ' clickable' : ''}${inspected ? ' inspected' : ''}`}
+      className={`character-wrapper state-${animState}${mainState ? ` main-${mainState}` : ''}${scene ? ` scene-${scene.kind}` : ''}${onClick ? ' clickable' : ''}${inspected ? ' inspected' : ''}${field ? ' has-tag' : ''}`}
       style={{
         left: `${agent.position.x}%`,
         top: `${agent.position.y}%`,
         transform: 'translate(-50%, -100%)',
         zIndex: speaking ? SPEAKING_Z : zIndex ?? Math.round(agent.position.y),
       }}
-      title={projectTag || main ? tooltip : undefined}
+      title={projectTag || main || field ? tooltip : undefined}
       data-main-state={mainState}
     >
       {effectSrc && <EffectBubble src={effectSrc} alt={agent.state} />}

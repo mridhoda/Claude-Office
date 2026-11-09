@@ -112,6 +112,21 @@
   z-index: 1;
 }
 
+/* In review (JSM HQ): a purple pin with a white eye, where a blocked post-it has its red one */
+.task-note.review::before {
+  content: '';
+  position: absolute;
+  top: -1.4cqw;
+  left: 50%;
+  width: 3.2cqw;
+  height: 3.2cqw;
+  margin-left: -1.6cqw;
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 50%, #fff 0 0.7cqw, #7c4dff 0.8cqw);
+  box-shadow: 0 0.4cqw 0 rgba(40, 10, 90, 0.45), inset -0.5cqw -0.5cqw 0 rgba(0, 0, 0, 0.2);
+  z-index: 1;
+}
+
 /* "+N": the column has more than it shows */
 .task-more {
   flex: 0 0 auto;

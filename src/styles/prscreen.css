@@ -1,0 +1,61 @@
+/* ===== PR SCREEN (JSM HQ) =====
+   The wall TV over-drawn with the open pull requests (src/components/PrScreen.tsx). Laid over the screen
+   in the room art and skewed along the wall like the task board; sized in cqw (1 % of its width). */
+
+.pr-screen {
+  position: absolute;
+  transform-origin: 0 0;
+  z-index: 11;
+  container-type: inline-size;
+  cursor: pointer;
+  outline: none;
+  overflow: hidden;
+  background: #14171d;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  color: #d7dde8;
+}
+/* cqw on the container itself would measure the room, not this box: padding and rings live one level in */
+.pr-screen-body {
+  box-sizing: border-box;
+  height: 100%;
+  padding: 4cqw 5cqw 0 5cqw;
+  box-shadow: inset 0 0 0 1cqw #2b303a;
+}
+.pr-screen:focus-visible .pr-screen-body { box-shadow: inset 0 0 0 1.4cqw #59b7f2; }
+
+.pr-screen-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: 12cqw;
+  line-height: 1.1;
+  padding-bottom: 2cqw;
+  margin-bottom: 2cqw;
+  border-bottom: 0.7cqw solid #2b303a;
+  white-space: nowrap;
+}
+.pr-screen-head b { color: #fff; letter-spacing: 0.4cqw; }
+.pr-screen-head span { color: #9aa4b5; font-size: 10cqw; }
+
+.pr-row {
+  display: flex;
+  align-items: baseline;
+  gap: 2.5cqw;
+  font-size: 10.5cqw;
+  line-height: 1.35;
+  white-space: nowrap;
+  overflow: hidden;
+}
+.pr-mark { font-style: normal; font-weight: 700; width: 8cqw; flex: 0 0 auto; text-align: center; }
+.pr-num { flex: 0 0 auto; color: #9aa4b5; }
+.pr-title { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+
+.pr-row.pending   .pr-mark { color: #8b949e; }
+.pr-row.reviewing .pr-mark { color: #4c9ffe; }
+.pr-row.changes   .pr-mark { color: #ff6b63; }
+.pr-row.passed    .pr-mark { color: #4cd964; }
+.pr-row.merged    .pr-mark { color: #b48cff; }
+.pr-row.merged { opacity: 0.7; }
+.pr-row.changes .pr-title { color: #ffb3ae; }
+
+.pr-more { font-size: 9cqw; color: #9aa4b5; text-align: right; }
