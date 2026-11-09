@@ -190,7 +190,7 @@ const Character: React.FC<CharacterProps> = ({ agent, idleDurationMs = 0, zIndex
     : mainState === 'error' ? `⚠ API error${projectTag ? ` · ${projectTag}` : ''}` : null
   // JSM HQ: the field this worker is in, as a coloured pill under its name
   const fieldLabel = roleLabelText(agent.roleLabel)
-  const field = fieldLabel ? roleLabelStyle(fieldLabel) : null
+  const field = fieldLabel ? roleLabelStyle(fieldLabel, agent.roleColor) : null
   const tooltip = [agent.name, fieldLabel || null, projectTag, main && agent.statusText ? `— ${agent.statusText}` : null].filter(Boolean).join(' ')
 
   return (

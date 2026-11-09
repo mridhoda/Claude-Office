@@ -28,8 +28,26 @@ const OTHER: RoleLabelStyle = { bg: '#8b949e', fg: '#0d1117' }
 /** The longest label drawn; longer ones are cut with an ellipsis so they never widen the pill past the sprite */
 export const ROLE_LABEL_MAX = 16
 
-/** The colours for a field, by the words in it. Any other field gets the neutral grey. */
-export function roleLabelStyle(label: string): RoleLabelStyle {
+/** Relative luminance of #rrggbb (WCAG) */
+function luminance(hex: string): number {
+  const [r, g, b] = [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16) / 255).map(c => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4))
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b
+}
+
+/** Whichever of white and the near-black text has the better contrast on `bg` (#rrggbb). */
+function readableOn(bg: string): string {
+  const L = luminance(bg)
+  const white = 1.05 / (L + 0.05)
+  const dark = (L + 0.05) / (luminance('#0d1117') + 0.05)
+  return white > dark ? '#ffffff' : '#0d1117'
+}
+
+/**
+ * The colours for a field. A colour chosen for the role in HQ (#rrggbb) wins; without one, the words in the
+ * field decide, and any other field gets the neutral grey.
+ */
+export function roleLabelStyle(label: string, color?: string): RoleLabelStyle {
+  if (color && /^#[0-9a-fA-F]{6}$/.test(color)) return { bg: color, fg: readableOn(color) }
   const text = label.toLowerCase()
   for (const [pattern, style] of FIELDS) if (pattern.test(text)) return style
   return OTHER

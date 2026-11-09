@@ -52,6 +52,7 @@ export interface Agent {
   model?: string            // the session's model (session_model / session_started)
   scene?: AgentScene        // a signal's scene on the character that ran the command
   roleLabel?: string        // JSM HQ: the field this worker is in (its HQ role), drawn under the sprite
+  roleColor?: string        // JSM HQ: the colour chosen for that role (#rrggbb); without it the label's colour follows its words
   /** JSM HQ: what this agent just said to another one, shown over its head for a few seconds (src/talk.ts) */
   talk?: AgentTalk
 }
@@ -248,6 +249,7 @@ export interface SnapshotAgent {
   project?: string
   server?: string
   roleLabel?: string
+  roleColor?: string
 }
 
 /**

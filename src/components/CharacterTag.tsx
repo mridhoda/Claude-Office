@@ -10,10 +10,10 @@ import type { Agent } from '../types'
 /** Above every character and piece of furniture in the room (those run by y, up to 100) */
 export const TAG_Z = 110
 
-const CharacterTag: React.FC<{ agent: Pick<Agent, 'name' | 'roleLabel' | 'position'> }> = ({ agent }) => {
+const CharacterTag: React.FC<{ agent: Pick<Agent, 'name' | 'roleLabel' | 'roleColor' | 'position'> }> = ({ agent }) => {
   const label = roleLabelText(agent.roleLabel)
   if (!label) return null
-  const field = roleLabelStyle(label)
+  const field = roleLabelStyle(label, agent.roleColor)
   return (
     <div
       className="char-tag"

@@ -133,3 +133,36 @@ describe('the field travels with the agent', () => {
     expect(state.agents.find(a => a.id === 'cat')!.roleLabel).toBeUndefined()
   })
 })
+
+describe('a colour chosen for the role in HQ', () => {
+  it('wins over the words in the field', () => {
+    expect(roleLabelStyle('DevOps', '#112233').bg).toBe('#112233')
+    expect(roleLabelStyle('Whatever', '#abcdef').bg).toBe('#abcdef')
+  })
+
+  it('is ignored when it is not #rrggbb (the words decide again)', () => {
+    expect(roleLabelStyle('DevOps', 'orange').bg).toBe(ORANGE)
+    expect(roleLabelStyle('DevOps', '#fff').bg).toBe(ORANGE)
+    expect(roleLabelStyle('QA', '').bg).toBe(GREEN)
+  })
+
+  it('always comes with text that reads on it', () => {
+    expect(roleLabelStyle('x', '#ffffff').fg).toBe('#0d1117')
+    expect(roleLabelStyle('x', '#101010').fg).toBe('#ffffff')
+    expect(roleLabelStyle('x', '#e3c04a').fg).toBe('#0d1117')
+    expect(roleLabelStyle('x', '#3fb950').fg).toBe('#0d1117') // a mid green reads better dark
+    expect(roleLabelStyle('x', '#1f2a7a').fg).toBe('#ffffff')
+  })
+
+  it('reaches the tag, and travels with the agent on spawn and in a snapshot', () => {
+    const a = createAgent({ id: 'amy', name: 'Amy', role: 'frontend-developer', spot: MAIN_ROOM.agentSpots[2], hiredAt: 1 })
+    const out = renderToStaticMarkup(createElement(CharacterTag, { agent: { ...a, roleLabel: 'Whatever', roleColor: '#123456' } }))
+    expect(out).toContain('--tag-bg:#123456')
+    const env: OfficeEnv = { now: 1_000_000, live: true, computePath: () => [], random: () => 0.5 }
+    const base = initialOfficeState([createAgent({ id: BOSS_ID, name: 'Boss', role: 'boss', spot: MAIN_ROOM.agentSpots[0], hiredAt: 1 })], 1_000_000)
+    const { state } = reduceOffice(base, { type: 'agent_spawned', agent: { id: 'dee', name: 'Dee', role: 'devops', task: 'x', roleLabel: 'Ops', roleColor: '#654321' } }, env)
+    expect(state.agents.find(x => x.id === 'dee')!.roleColor).toBe('#654321')
+    const snap = reduceOffice(base, { type: 'snapshot', activeAgents: [{ id: 'eve', name: 'Eve', role: 'debugger', task: 'x', roleLabel: 'Ops', roleColor: '#222222' }] }, env)
+    expect(snap.state.agents.find(x => x.id === 'eve')!.roleColor).toBe('#222222')
+  })
+})

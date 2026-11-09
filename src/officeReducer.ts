@@ -423,6 +423,7 @@ interface SpawnFields {
   statusText?: string
   model?: string
   roleLabel?: string
+  roleColor?: string
 }
 
 /**
@@ -450,6 +451,7 @@ function spawnAgent(state: OfficeState, raw: SpawnFields, env: OfficeEnv, announ
     unread: raw.unread || undefined,
     ...(raw.model ? { model: raw.model } : {}),
     ...(raw.roleLabel ? { roleLabel: raw.roleLabel } : {}),
+    ...(raw.roleColor ? { roleColor: raw.roleColor } : {}),
   }
 
   let agent: Agent
