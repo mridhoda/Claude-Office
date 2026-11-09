@@ -59,3 +59,8 @@
 .pr-row.changes .pr-title { color: #ffb3ae; }
 
 .pr-more { font-size: 9cqw; color: #9aa4b5; text-align: right; }
+
+/* No pull requests: the TV's own art shows through; the button is only a hit area with a faint hover ring */
+.pr-screen-empty { background: transparent; }
+.pr-screen-empty:hover { box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.55); }
+.pr-screen-empty:focus-visible { box-shadow: inset 0 0 0 2px #59b7f2; }

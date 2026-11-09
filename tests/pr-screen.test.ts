@@ -104,8 +104,18 @@ describe('the store', () => {
 describe('the component', () => {
   const html = () => renderToStaticMarkup(createElement(PrScreen))
 
-  it('draws nothing while there are no pull requests (the TV keeps its art)', () => {
+  it('draws nothing while there are no pull requests outside JSM HQ (the TV keeps its art)', () => {
     expect(html()).toBe('')
+    expect(renderToStaticMarkup(createElement(PrScreen, { embedded: false }))).toBe('')
+  })
+
+  it('inside JSM HQ the TV is still a button with no pull requests: an invisible hit area that opens the PRs panel', () => {
+    const out = renderToStaticMarkup(createElement(PrScreen, { embedded: true }))
+    expect(out).toContain('pr-screen-empty')
+    expect(out).toContain('role="button"')
+    expect(out).toContain('Click to open the PRs panel')
+    expect(out).not.toContain('pr-row')
+    expect(out).toContain(`left:${PR_RECT.left}%`)
   })
 
   it('draws a row per pull request with its state, and the count', () => {

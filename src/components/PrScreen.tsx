@@ -6,6 +6,7 @@
 
 import React from 'react'
 import { PR_RECT, prSummary, usePrScreen, visibleRows } from '../prScreen'
+import { isHqEmbed } from '../serverUrl'
 import type { PrState } from '../types'
 import '../styles/prscreen.css'
 
@@ -15,11 +16,28 @@ const WORD: Record<PrState, string> = { pending: 'waiting for review', reviewing
 interface PrScreenProps {
   /** A click on the TV: what the 'tv-monitor' hotspot under it does, and HQ's PRs panel */
   onActivate?: () => void
+  /** Inside JSM HQ the TV is a button even with no pull requests (it opens HQ's PRs panel); defaults to isHqEmbed() */
+  embedded?: boolean
 }
 
-const PrScreen: React.FC<PrScreenProps> = ({ onActivate }) => {
+const PrScreen: React.FC<PrScreenProps> = ({ onActivate, embedded = isHqEmbed() }) => {
   const info = usePrScreen()
-  if (!info) return null
+  if (!info) {
+    // Nothing to draw: the TV keeps its own art, with an invisible button on it so a click still opens the PRs panel
+    if (!embedded) return null
+    return (
+      <div
+        className="pr-screen pr-screen-empty"
+        style={{ left: `${PR_RECT.left}%`, top: `${PR_RECT.top}%`, width: `${PR_RECT.width}%`, height: `${PR_RECT.height}%`, transform: `skewY(${PR_RECT.skewDeg}deg)` }}
+        role="button"
+        tabIndex={0}
+        aria-label="Pull requests: none yet. Open the PRs panel"
+        title="No pull requests yet. Click to open the PRs panel"
+        onClick={e => { e.stopPropagation(); onActivate?.() }}
+        onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); onActivate?.() } }}
+      />
+    )
+  }
   const { shown, more } = visibleRows(info)
   const detail = info.items.map(i => `#${i.number} ${i.title || 'untitled'}: ${WORD[i.state]}${i.author ? ` (${i.author})` : ''}`).join('\n')
 
