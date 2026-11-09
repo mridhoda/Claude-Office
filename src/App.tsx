@@ -120,6 +120,8 @@ function createBoss(): Agent {
     statusText: 'clocked in',
     color: cfg.color,
     emoji: cfg.emoji,
+    // Inside JSM HQ the boss is the person using it: named like every other character, with the cfg colour
+    ...(isHqEmbed() ? { roleLabel: 'Boss', roleColor: cfg.color } : {}),
     hiredAt: Date.now(),
     pathQueue: computePath(entry, target),
   }
