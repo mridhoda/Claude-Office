@@ -24,7 +24,7 @@ import {
   MAIN_ROOM, BOSS_ID, CLAUDE_ID, CLAUDE_ROLE,
   type OfficeState, type OfficeAction, type OfficeEffect, type OfficeEnv,
 } from './officeReducer'
-import { BOSS_ROLE } from './config'
+import { BOSS_ROLE, BOSS_ROLE_LABEL } from './config'
 import { isHqEmbed, officeHttpBase, officeWsUrl } from './serverUrl'
 import { chatToHq, postToHq } from './hqBridge'
 import { pickEvent } from './events'
@@ -121,7 +121,7 @@ function createBoss(): Agent {
     color: cfg.color,
     emoji: cfg.emoji,
     // Inside JSM HQ the boss is the person using it: named like every other character, with the cfg colour
-    ...(isHqEmbed() ? { roleLabel: 'Boss', roleColor: cfg.color } : {}),
+    ...(isHqEmbed() ? { roleLabel: BOSS_ROLE_LABEL, roleColor: cfg.color } : {}),
     hiredAt: Date.now(),
     pathQueue: computePath(entry, target),
   }

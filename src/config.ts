@@ -29,7 +29,7 @@ import { officeHttpBase } from './serverUrl'
 type UserConfig = { boss?: { name?: string; sprite?: string; color?: string; emoji?: string } }
 
 /** The boss fields GET /config returns (server/config.js bossFromConfig). */
-export interface BossConfig { name: string; sprite: string; color: string; emoji: string }
+export interface BossConfig { name: string; sprite: string; color: string; emoji: string; roleLabel?: string }
 
 // Load user config (office.config.json) — bundled by Vite.
 // import.meta.glob is resolved at build time and yields {} when the file is
@@ -48,6 +48,8 @@ export const BOSS_ROLE = 'boss'
 export let BOSS_NAME = bossName
 export let BOSS_COLOR = bossColor
 export let BOSS_EMOJI = bossEmoji
+/** The title drawn under the boss's name in the HQ embed. HQ sets it ("Owner", "Product Manager"…). */
+export let BOSS_ROLE_LABEL = 'Boss'
 
 /**
  * The boss's AGENT_CONFIGS entry, shared by reference with src/types.ts so
@@ -103,6 +105,7 @@ export function applyBossConfig(boss: Partial<BossConfig> | null | undefined): B
     BOSS_CHAR  = text(boss.sprite) ?? BOSS_CHAR
     BOSS_COLOR = text(boss.color)  ?? BOSS_COLOR
     BOSS_EMOJI = text(boss.emoji)  ?? BOSS_EMOJI
+    BOSS_ROLE_LABEL = text(boss.roleLabel) ?? BOSS_ROLE_LABEL
   }
   BOSS_CONFIG.title = BOSS_NAME
   BOSS_CONFIG.color = BOSS_COLOR
