@@ -1145,7 +1145,11 @@ function reduceEvent(state: OfficeState, action: OfficeAction, env: OfficeEnv): 
 
       let msgSender: string, msgRole: string, msgColor: string
       const role = action.role
-      if (sender.toLowerCase() === 'claude') {
+      // A message that names its sender (HQ's agents answering the user): that agent, by name and colour
+      const speaker = action.senderId && !action.recipient ? findOfficeAgent(state.agents, action.senderId, null) : undefined
+      if (speaker) {
+        msgSender = speaker.name; msgRole = speaker.role; msgColor = cfgFor(speaker.role).color
+      } else if (sender.toLowerCase() === 'claude') {
         // From the AI watcher/bridge: always Claude
         const c = cfgFor(CLAUDE_ROLE)
         msgSender = c.title; msgRole = CLAUDE_ROLE; msgColor = c.color

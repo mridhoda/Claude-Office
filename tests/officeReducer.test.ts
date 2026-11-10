@@ -443,6 +443,14 @@ describe('server message ids (C34)', () => {
     expect(effects).toContainEqual({ kind: 'seen', messageId: 778 })
   })
 
+  it('an answer that names its sender (HQ agents) shows that agent, not "Claude"', () => {
+    const { effects } = dispatchAll(fullOffice(1), [
+      { type: 'chat_message', id: 800, sender: 'w1', senderId: 'w1', role: 'assistant', text: 'The branch is main.', timestamp: 20 },
+    ])
+    const msg = effects.find(e => e.kind === 'msg') as { sender: string; role: string; text: string }
+    expect([msg.sender, msg.role, msg.text]).toEqual(['w1', 'debugger', 'The branch is main.'])
+  })
+
   it("the boss's own echo is not re-posted, only its row id is adopted", () => {
     // The echo is recognised by the configured boss name, which is 'Boss' without
     // an office.config.json and whatever the file says with one (CI copies the example)
