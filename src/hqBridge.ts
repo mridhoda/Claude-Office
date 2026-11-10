@@ -14,6 +14,7 @@ export type ToHq =
   | { type: 'agent-click'; agentId: string }
   | { type: 'board-click'; boardId: string | null }
   | { type: 'prs-click' }
+  | { type: 'chat'; text: string }
 
 /** What HQ tells this page */
 export type FromHq = { type: 'show-board'; boardId: string | null }
@@ -32,6 +33,12 @@ export function parseFromHq(data: unknown): FromHq | null {
   if (d.boardId === null) return { type: 'show-board', boardId: null }
   if (typeof d.boardId === 'string' && d.boardId.length > 0 && d.boardId.length <= MAX_ID) return { type: 'show-board', boardId: d.boardId }
   return null
+}
+
+/** What the user typed in the chat, as HQ's page should get it: null when there is nothing to send. */
+export function chatToHq(text: string): ToHq | null {
+  const t = text.trim()
+  return t ? { type: 'chat', text: t.slice(0, 3000) } : null
 }
 
 /** Tells HQ. False when this page is not inside HQ (the office then answers the click itself). */

@@ -3,7 +3,7 @@ import { ROLE_TO_CHAR } from '../config'
 import { getSpritePath, useTheme, toggleTheme, getTheme, themedDisplayName } from '../theme'
 import IncidentBadge from './IncidentBadge'
 import { postSetting } from '../permissions'
-import { officeHttpBase } from '../serverUrl'
+import { isHqEmbed, officeHttpBase } from '../serverUrl'
 
 export function getAvatarSrc(role: string, agentId?: string): string {
   const charBase = ROLE_TO_CHAR[role] ?? 'employee-3'
@@ -58,7 +58,8 @@ interface SlackChatProps {
   volume: number
   onToggleMute: () => void
   onVolumeChange: (v: number) => void
-  onSendMessage?: (text: string) => void
+  /** `local`: a notice the panel makes about itself (the theme toggle), not something the user said. */
+  onSendMessage?: (text: string, opts?: { local?: boolean }) => void
   onReaction?: (messageId: number, reactions: string[]) => void
   /** For video mode: auto-type text into the input box */
   autoTypeText?: string
@@ -342,7 +343,7 @@ const SlackChat: React.FC<SlackChatProps> = ({ messages, muted, volume, onToggle
           <input
             type="text"
             className="slack-input-field"
-            placeholder="Message #office-general"
+            placeholder={isHqEmbed() ? 'Write to the team · @name or @role' : 'Message #office-general'}
             value={inputText}
             onChange={e => {
               const val = e.target.value
@@ -360,7 +361,7 @@ const SlackChat: React.FC<SlackChatProps> = ({ messages, muted, volume, onToggle
                 if (trimmed === '/the-office' || trimmed === '/theoffice') {
                   toggleTheme()
                   const nowOn = getTheme() === 'office'
-                  onSendMessage?.(nowOn ? '🧻 Dunder Mifflin mode: ON. Identity theft is not a joke.' : '🔁 Office theme: OFF')
+                  onSendMessage?.(nowOn ? '🧻 Dunder Mifflin mode: ON. Identity theft is not a joke.' : '🔁 Office theme: OFF', { local: true })
                 } else {
                   onSendMessage?.(trimmed)
                 }

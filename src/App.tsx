@@ -26,7 +26,7 @@ import {
 } from './officeReducer'
 import { BOSS_ROLE } from './config'
 import { isHqEmbed, officeHttpBase, officeWsUrl } from './serverUrl'
-import { postToHq } from './hqBridge'
+import { chatToHq, postToHq } from './hqBridge'
 import { pickEvent } from './events'
 import { getInteraction } from './interactions'
 import {
@@ -1395,13 +1395,20 @@ const App: React.FC = () => {
     setMuted(v === 0)
   }, [])
 
-  const handleSendMessage = useCallback((text: string) => {
+  const handleSendMessage = useCallback((text: string, opts?: { local?: boolean }) => {
     const bossCfg = AGENT_CONFIGS[BOSS_ROLE] ?? AGENT_CONFIGS['default']
     addMsg(bossCfg.title, BOSS_ROLE, bossCfg.color, text)
     setAutoTypeText(undefined)
     // Send to server so Claude can read it. ?sim / ?video scripts stay local:
     // their scripted prompts must not reach chat.db or the AI watcher (C36).
     if (isSimMode) return
+    // Inside JSM HQ there is no chat server here: HQ's page takes what the user typed and routes it (to the agents they
+    // @mentioned, or the lead). Notices the panel makes about itself (the theme toggle) stay in the panel.
+    if (isHqEmbed()) {
+      const note = opts?.local ? null : chatToHq(text)
+      if (note) postToHq(note)
+      return
+    }
     fetch(`${officeHttpBase()}/chat`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

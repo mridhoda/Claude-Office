@@ -1668,9 +1668,10 @@
    taken off so the scene keeps its size. */
 html[data-hq-embed] .title-bar { display: none; }
 html[data-hq-embed] .app-wrapper { height: 654px; border-color: transparent; box-shadow: none; transform: translate(-50%, -50%) scale(var(--hq-scale, 1)); }
-/* HQ is the only place a message can go: the chat box and the AI watcher toggle talk to routes HQ does not have */
-html[data-hq-embed] .slack-input-wrap,
-html[data-hq-embed] .slack-cron-toggle { display: none; }
+/* The chat box is on again: what is typed goes to HQ's page (src/hqBridge.ts), which routes it to the lead or the agents named
+   with @. The AI watcher toggle talks to a route HQ does not have, and the / commands are Claude Office's own server's. */
+html[data-hq-embed] .slack-cron-toggle,
+html[data-hq-embed] .slack-slash-hint { display: none; }
 /* The status strip's hook counter and "start it: npm run server" are about Claude Office's own server, not HQ: keep only the connection state */
 html[data-hq-embed] .strip-hooks,
 html[data-hq-embed] .strip-hint,

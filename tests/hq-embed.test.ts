@@ -11,7 +11,7 @@ import {
   A2A_VISIT_MS, MAIN_ROOM, BOSS_ID, CLAUDE_ID, initialOfficeState, reduceOffice,
   type OfficeEffect, type OfficeEnv, type OfficeState,
 } from '../src/officeReducer'
-import { parseFromHq } from '../src/hqBridge'
+import { chatToHq, parseFromHq } from '../src/hqBridge'
 import { signalFailureLabel } from '../src/signals'
 import { cycleBoards, lockBoard, reduceTaskBoards, shownBoard, type TaskBoardInfo, type TaskBoardsState } from '../src/taskBoard'
 import type { Agent, SignalEvent } from '../src/types'
@@ -213,5 +213,18 @@ describe('a directed message from HQ (senderId / recipientId)', () => {
     const { state, effects } = reduceOffice(s, message, env())
     expect(agent(state, 'amy')!.state).toBe('idle')
     expect(kinds(effects, 'msg').length).toBe(1)
+  })
+})
+
+describe('chatToHq', () => {
+  it('turns what the user typed into the message HQ expects', () => {
+    expect(chatToHq('  @Ayu hello  ')).toEqual({ type: 'chat', text: '@Ayu hello' })
+  })
+  it('sends nothing for an empty or blank line', () => {
+    expect(chatToHq('')).toBeNull()
+    expect(chatToHq('   \n ')).toBeNull()
+  })
+  it('keeps a long message to a size HQ will take', () => {
+    expect((chatToHq('x'.repeat(5000)) as { text: string }).text).toHaveLength(3000)
   })
 })
